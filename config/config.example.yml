@@ -1,0 +1,16 @@
+worker_configs:
+  arbitrary_config_name:
+    schedule: 600
+    db_api: "xxx"
+    s3_key: "xxx"
+    s3_secret: "xxx"
+    s3_bucket: "xxx"
+    s3_key_path: "xxx"
+
+  another_arbitrary_config_name:
+    schedule: 300
+    db_api: "xxx"
+    s3_key: "xxx"
+    s3_secret: "xxx"
+    s3_bucket: "xxx"
+    s3_key_path: "xxx"

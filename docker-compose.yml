@@ -1,0 +1,41 @@
+version: '3.4'
+services:
+  dropbox-worker:
+    build: .
+    image: &img dropbox:0.0.1
+    command: [celery, -A, celery_runner, worker, --loglevel=WARN]
+    environment: &env
+      - CELERY_BROKER_URL=redis://redis//
+      - CELERY_BACKEND_URL=redis://redis
+      - C_FORCE_ROOT=TRUE
+    depends_on:
+      - beat-scheduler
+      - redis
+    restart: 'no'
+    volumes:
+      - ./dropboxs3:/dropboxs3
+
+  beat-scheduler:
+    build: .
+    image: *img
+    command: [celery, -A, celery_runner, beat, --loglevel=INFO]
+    environment: *env
+    depends_on:
+      - redis
+    restart: 'no'
+    volumes:
+      - ./dropboxs3:/dropboxs3
+      - ./config/config.yml:/dropboxs3/config.yml
+
+  redis:
+    image: redis:5.0
+    sysctls:
+      net.core.somaxconn: '511'
+
+  flower:
+    image: mher/flower
+    depends_on:
+      - redis
+    command: ["flower", "--broker=redis://redis:6379/0", "--port=8888"]
+    ports:
+      - "8888:8888"
