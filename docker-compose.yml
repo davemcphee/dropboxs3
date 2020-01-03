@@ -1,8 +1,7 @@
 version: '3.4'
 services:
   dropbox-worker:
-    build: .
-    image: &img dropbox:0.0.1
+    image: &img birgeraschmitz/dropboxs3:0.1.1
     command: [celery, -A, celery_runner, worker, --loglevel=WARN]
     environment: &env
       - CELERY_BROKER_URL=redis://redis//
@@ -16,7 +15,6 @@ services:
       - ./dropboxs3:/dropboxs3
 
   beat-scheduler:
-    build: .
     image: *img
     command: [celery, -A, celery_runner, beat, --loglevel=INFO]
     environment: *env
