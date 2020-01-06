@@ -60,11 +60,11 @@ def migrate_all(self, local_db_api_key, s3_key_s, s3_secret_s, s3_bucket_s, s3_p
         file_list = db.get_images()
         tasklog.debug('Got list of {} images for API key {}'.format(len(file_list.entries), local_db_api_key))
         if len(file_list.entries) == 0:
-            return
+            return 0
     except Exception as exc:
         tasklog.error('migrate_all() failed to get files from DB: {}'.format(exc))
         self.retry(exc=exc, countdown=int(random.uniform(2, 4) ** self.request.retries))
-        return
+        return 0
 
     # launch a chord
     try:
