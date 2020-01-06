@@ -76,11 +76,17 @@ def migrate_all(self, local_db_api_key, s3_key_s, s3_secret_s, s3_bucket_s, s3_p
     except Exception as exc:
         tasklog.error('migrate_all() failed to start a chord for config {}: {}'.format(config_name, exc))
         self.retry(exc=exc, countdown=int(random.uniform(2, 4) ** self.request.retries))
+    finally:
+        if file_list and hasattr(file_list, 'entries'):
+            return len(file_list.entries)
+        else:
+            return 0
 
 
 @app.task(
     bind=True,
-    name='process_single_file'
+    name='process_single_file',
+    rate_limit="4/m"
 )
 def process_single_file(self, db_api_s, s3_key_s, s3_secret_s, s3_bucket_s, s3_path_s, image):
     """
@@ -113,7 +119,7 @@ def process_single_file(self, db_api_s, s3_key_s, s3_secret_s, s3_bucket_s, s3_p
             s3_path_for_file = "n/a"
             try:
                 tasklog.debug('Uploading to S3 {}'.format(image.path_lower))
-                s3_path_for_file = db.generate_s3_path_chunk(image)
+                s3_path_for_file = db.generate_s3_path_chunk(m)
                 s3 = S3Worker(key=s3_key_s, secret=s3_secret_s, bucket=s3_bucket_s, path=s3_path_s, auto_login=True)
                 s3.upload_to_s3(f, s3_path_for_file)
             except Exception as e:
