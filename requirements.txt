@@ -1,4 +1,4 @@
-requests==2.22.0
+requests==2.31.0
 celery==5.2.2
 redis==4.4.4
 dropbox==9.4.0
