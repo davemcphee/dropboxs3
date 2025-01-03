@@ -1,6 +1,6 @@
 import pytest
 
-from dropboxs3 import S3Worker
+from dropboxs3.s3_worker import S3Worker
 
 
 @pytest.fixture

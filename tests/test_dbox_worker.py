@@ -1,14 +1,12 @@
 import datetime
-import pytest
 from collections import namedtuple
-
 from unittest.mock import Mock
 
-from dropboxs3 import DBoxWorker
-
+import pytest
 from dropbox.files import ListFolderResult, FileMetadata, PhotoMetadata, Dimensions
 from dropbox.stone_validators import Union as StoneValidatorUnion
 
+from dropboxs3.dbox_worker import DBoxWorker
 
 IMAGE = FileMetadata(name='2020-01-05 21.39.05.jpg', id='id:0I34Sg0NuugAAAAAAAEJcg',
                      client_modified=datetime.datetime(2020, 1, 6, 3, 39, 5),

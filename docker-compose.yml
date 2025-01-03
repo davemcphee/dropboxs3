@@ -1,39 +1,78 @@
-version: '3.4'
 services:
-  dropbox-worker:
-    image: &img birgeraschmitz/dropboxs3:0.1.1
-    command: [celery, -A, celery_runner, worker, --loglevel=WARN]
+  image-worker:
+    image: &img dbxs3:latest
+    command: [celery, -A, dropboxs3.celery_runner, worker, -Q, celery, -E, --loglevel=INFO]
     environment: &env
       - CELERY_BROKER_URL=redis://redis//
       - CELERY_BACKEND_URL=redis://redis
       - C_FORCE_ROOT=TRUE
+      - FLOWER_UNAUTHENTICATED_API=true
     depends_on:
-      - beat-scheduler
       - redis
-    restart: 'no'
-    volumes:
-      - ./dropboxs3:/dropboxs3
+    restart: 'always'
+    networks:
+      - traefik
 
-  beat-scheduler:
+  video-worker:
     image: *img
-    command: [celery, -A, celery_runner, beat, --loglevel=INFO]
+    command: [celery, -A, dropboxs3.celery_runner, worker, -Q, video, --concurrency, "1", -E, --loglevel=INFO]
     environment: *env
     depends_on:
       - redis
-    restart: 'no'
-    volumes:
-      - ./dropboxs3:/dropboxs3
-      - ./config/config.yml:/dropboxs3/config.yml
+    restart: 'always'
+    networks:
+      - traefik
 
-  redis:
-    image: redis:5.0
-    sysctls:
-      net.core.somaxconn: '511'
-
-  flower:
-    image: mher/flower
+  beat-scheduler:
+    image: *img
+    command: [celery, -A, dropboxs3.celery_runner, beat, --loglevel=INFO]
+    environment: *env
     depends_on:
       - redis
-    command: ["flower", "--broker=redis://redis:6379/0", "--port=8888"]
-    ports:
-      - "8888:8888"
+    restart: 'always'
+    networks:
+      - traefik
+
+  celery-flower:
+    image: *img
+    command: [celery, -A, dropboxs3.celery_runner, flower, --loglevel=INFO]
+    environment: *env
+    depends_on:
+      - redis
+    restart: 'always'
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.db-flower.entrypoints=web"
+      - "traefik.http.routers.db-flower.rule=Host(`db-flower.home.local`)"
+      - "traefik.http.services.db-flower.loadbalancer.server.port=5555"
+
+  redis:
+    image: redis:7.4.1
+    sysctls:
+      net.core.somaxconn: '511'
+    command:
+      - 'redis-server'
+      - '--save ""'
+    networks:
+      - traefik
+
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.67.0
+    environment:
+      - REDIS_ADDR=redis://redis
+    restart: 'always'
+    depends_on:
+      - redis
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-exporter.entrypoints=web"
+      - "traefik.http.routers.redis-exporter.rule=Host(`redis-exporter.home.local`)"
+      - "traefik.http.services.redis-exporter.loadbalancer.server.port=9121"
+networks:
+  traefik:
+    name: traefik
+    external: true

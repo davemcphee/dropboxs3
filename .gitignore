@@ -15,4 +15,6 @@ venv/
 
 # pycharm
 .idea/
-config/config.yml
+
+# auth
+config/config.yaml

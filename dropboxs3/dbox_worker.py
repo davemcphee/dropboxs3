@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import dropbox
 
 
@@ -9,9 +7,9 @@ class DBoxWorker(object):
                  auto_login=False):
 
         self.db_api_key = db_api_key
-        self.celery     = celery
+        self.celery = celery
         self.auto_login = auto_login
-        self.dbx        = None
+        self.dbx = None
 
         if not any([db_api_key]):
             raise ValueError('missing required args')

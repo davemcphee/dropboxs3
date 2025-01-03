@@ -1,16 +1,14 @@
-#!/usr/bin/env python3
-
 import boto3
 
 
 class S3Worker(object):
     def __init__(self, key=None, secret=None, bucket=None, path=None, auto_login=False):
-        self.key        = key
-        self.secret     = secret
-        self.bucket     = bucket
-        self.path       = path
+        self.key = key
+        self.secret = secret
+        self.bucket = bucket
+        self.path = path
         self.auto_login = auto_login
-        self.client     = None
+        self.client = None
 
         if self.auto_login:
             assert all([key, secret, bucket, path])

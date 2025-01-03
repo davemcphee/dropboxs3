@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "dropboxs3"
+version = "0.1.0"
+description = ""
+authors = ["Alex Schmitz <alex.schmitz@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+boto3 = "^1.35.92"
+celery = "^5.4.0"
+dropbox = "^12.0.2"
+flower = "^2.0.1"
+python-redis-lock = "^4.0.0"
+pyyaml = "^6.0.2"
+redis = "^5.2.1"
+requests = "^2.32"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+pytest = "^8.3.4"
+nox = "^2024.10.9"
+nox-poetry = "^1.0.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
