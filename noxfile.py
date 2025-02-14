@@ -24,22 +24,17 @@ MYPY_TYPE_STUBS = [
 
 # don't define versions here, pyproject.toml has the version.
 # "pytest-xdist",
-# UNIT_TEST_STANDARD_DEPENDENCIES = [
-#     "factory-boy",
-#     "fakeldap",
-#     "mock",
-#     "moto",
-#     "pytest",
-#     "pytest-celery",
-#     "pytest-cov",
-#     "pytest-django",
-#     "responses",
-# ]
+UNIT_TEST_STANDARD_DEPENDENCIES = [
+    "mock",
+    "pytest",
+    "pytest-celery",
+    "pytest-cov",
+    "responses",
+]
 
-# FLAKE8_DEPENDENCIES = [
-#     "Flake8-pyproject==1.2.3",
-#     "flake8-django==1.4",
-# ]
+FLAKE8_DEPENDENCIES = [
+    "Flake8-pyproject==1.2.3",
+]
 
 DEFAULT_PYTHON_VERSION = "3.12"
 UNIT_TEST_PYTHON_VERSIONS = ["3.12"]
@@ -132,9 +127,6 @@ def unit_test_cleanup(_: nox.session):
     Clean up logs, dist/wheels, etc.
     """
     for filepath in [
-        "local.gunicorn.access.log",
-        "local.log",
-        "nopodname.log",
         *glob.glob("dist/*.whl"),
     ]:
         Path(filepath).unlink(missing_ok=True)

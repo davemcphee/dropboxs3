@@ -14,12 +14,14 @@ class S3Worker(object):
             assert all([key, secret, bucket, path])
             self.client = self._get_client()
 
-        if not self.path.endswith('/'):
-            self.path += '/'
+        if not self.path.endswith("/"):
+            self.path += "/"
 
     def _get_client(self):
         try:
-            return boto3.client('s3', aws_access_key_id=self.key, aws_secret_access_key=self.secret)
+            return boto3.client(
+                "s3", aws_access_key_id=self.key, aws_secret_access_key=self.secret
+            )
         except Exception:
             raise
 

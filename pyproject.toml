@@ -18,12 +18,43 @@ redis = "^5.2.1"
 requests = "^2.32"
 
 
+[tool.poetry.group.dev]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
-pytest = "^8.3.4"
+coverage = "^7.6.10"
+flake8 = "^7.1.1"
+isort = "^5.13.2"
 nox = "^2024.10.9"
 nox-poetry = "^1.0.3"
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+pytest-flake8 = "^1.3.0"
+responses = "^0.25.3"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.pytest.ini_options]
+console_output_style = "progress"
+#filterwarnings = [
+#    "ignore::DeprecationWarning",
+#    "ignore::django.core.cache.CacheKeyWarning",
+#]
+addopts = "--cache-clear --cov=dropboxs3 --cov-report= --cov-fail-under=0" # --disable-pytest-warnings
+testpaths = ["tests"]
+
+[tool.coverage.report]
+fail_under = 2
+show_missing = true
+skip_empty = true
+#omit = []
+exclude_lines = [
+    "pragma: NO COVER", # Re-enable the standard pragma
+    "def __repr__", # Ignore debug-only repr
+    "raise NotImplementedError", # Ignore abstract methods
+]
+

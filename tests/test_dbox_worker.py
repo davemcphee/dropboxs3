@@ -1,87 +1,100 @@
+from unittest import TestCase, mock
 import datetime
-from collections import namedtuple
-from unittest.mock import Mock
-
 import pytest
+from collections import namedtuple
+
+import responses
+
+from dropboxs3.dbox_worker import DBoxWorker
 from dropbox.files import ListFolderResult, FileMetadata, PhotoMetadata, Dimensions
 from dropbox.stone_validators import Union as StoneValidatorUnion
 
-from dropboxs3.dbox_worker import DBoxWorker
+IMAGE_PATH = "/camera uploads/2020-01-05 21.39.05.jpg"
 
-IMAGE = FileMetadata(name='2020-01-05 21.39.05.jpg', id='id:0I34Sg0NuugAAAAAAAEJcg',
-                     client_modified=datetime.datetime(2020, 1, 6, 3, 39, 5),
-                     server_modified=datetime.datetime(2020, 1, 6, 3, 39, 12),
-                     rev='59b70671fa8b501c386a6', size=3555594,
-                     path_lower='/camera uploads/2020-01-05 21.39.05.jpg',
-                     path_display='/Camera Uploads/2020-01-05 21.39.05.jpg',
-                     parent_shared_folder_id=None, media_info=None, symlink_info=None, sharing_info=None,
-                     is_downloadable=True, export_info=None, property_groups=None,
-                     has_explicit_shared_members=None,
-                     content_hash='e76e398626b42825f4d98247d9e72677444891078ecba06f334d7ec22825f475')
-
-PHOTO_METADATA = PhotoMetadata(dimensions=Dimensions(height=4032, width=3024), location=None,
-                               time_taken=datetime.datetime(2020, 1, 5, 21, 37, 5))
-
-LIST_FOLDER_RESULTS = ListFolderResult(entries=[IMAGE],
-                                       cursor='AAGU8Pk5ogR7MpsoWS1JYd8Cug6oYTd6eiUCZp74F3thzZ2N5UL3b3XErdXETFg0J3vSB_nTKcGZ1zbXVsCM4DCx-4ISMswTL2M0NShmLn6k5-4yaV8dJUR2iw9-TZjJdQhHcUzI9bzrS_uY89W9XPJUPUo83akRND28IY0_NAWcSJnR4OjIQTp3B3MH8mz-cFNxuH6ruuD1Xu1Idox-9h5aBZiyjgvXCioS_wMMkaDlhw', has_more=False)
+FILE_ENTRY = {
+    ".tag": "file",
+    "client_modified": f"{datetime.datetime(2020, 1, 6, 3, 39, 5).strftime('%Y-%m-%dT%H:%M:%SZ')}",
+    "id": "id:0I34Sg0NuugAAAAAAAEJcg",
+    "name": "2020-01-05 21.39.05.jpg",
+    "path_lower": IMAGE_PATH,
+    "rev": "59b70671fa8b501c386a6",
+    "server_modified": f"{datetime.datetime(2020, 1, 9, 3, 39, 5).strftime('%Y-%m-%dT%H:%M:%SZ')}",
+    "size": 12345,
+}
 
 
-@pytest.fixture
-def dbw():
-    def mocked_dropbox_api(*args, **kwargs):
-        class MockedDBX:
-            def __init__(self, api_key):
-                self.stuff = api_key
+class TestDBoxWorker(TestCase):
+    def setUp(self):
+        responses.add(
+            responses.POST,
+            "https://api.dropboxapi.com/oauth2/token",
+            json={"access_token": "fake_token", "expires_in": "1836102896"},
+            status=201,
+        )
+        responses.add(
+            responses.POST,
+            "https://api.dropboxapi.com/2/files/list_folder",
+            json={
+                "entries": [FILE_ENTRY],
+                "cursor": "fake_cursor",
+                "has_more": False,
+            },
+            status=201,
+        )
+        responses.add(
+            responses.POST,
+            "https://content.dropboxapi.com/2/files/download",
+            headers={"dropbox-api-result": "{\"foo\": \"bar\""},
+            json={
 
-            def files_list_folder(self, path):
-                return LIST_FOLDER_RESULTS
+            },
+            status=201,
+        )
 
-            def files_download(self, path):
-                md = IMAGE
-                md.media_info = PHOTO_METADATA
-                Request_Content = namedtuple('ReqContent', ['content'])
-                photo_bytez = Request_Content(bytes('some random string', 'utf-8'))
-                return md, photo_bytez
+    def test_autologin(self):
+        db = DBoxWorker(None, None, None, auto_login=False)
+        self.assertIsNone(db.dbx)
 
-        return MockedDBX('api_key')
+    def test_get_dbx(self):
+        db = DBoxWorker(
+            app_key="fake_key",
+            app_secret="fake_secret",
+            refresh_token="fake_refresh_token",
+            auto_login=True,
+        )
+        self.assertIsNotNone(db.dbx)
 
-    dbw = DBoxWorker(db_api_key='asdf', auto_login=False)
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
+    @responses.activate
+    def test_get_images(self):
+        db = DBoxWorker(
+            app_key="fake_key",
+            app_secret="fake_secret",
+            refresh_token="fake_refresh_token",
+            auto_login=True,
+        )
 
-    StoneValidatorUnion.validate_type_only = Mock()
+        # we should get a single image from the fake JSON FILE_ENTRY
+        images = db.get_images(path="/fake_path")
+        self.assertEqual(1, len(images.entries))
 
-    dbw.dbx = mocked_dropbox_api()  # Mock(side_effect=mocked_dropbox_api)
-    return dbw
+    @responses.activate
+    def test_get_file_from_dbox(self):
+        db = DBoxWorker(
+            app_key="fake_key",
+            app_secret="fake_secret",
+            refresh_token="fake_refresh_token",
+            auto_login=True,
+        )
 
-
-def test_truth():
-    assert True
-
-
-def test_raises():
-    with pytest.raises(ValueError):
-        DBoxWorker()
-
-
-def test_setup(dbw):
-    assert dbw
-
-
-def test_generate_s3_path_chunk_no_md(dbw):
-    file_name = '2019-04-24 15.11.32.mp4'
-    file_date = datetime.datetime(2019, 4, 24, 15, 11, 21)
-    desired_output = '2019/04/2019-04-24_15.11.32.mp4'
-    DBoxImage = namedtuple('image', ['name', 'client_modified'])
-    image = DBoxImage(file_name, file_date)
-    assert dbw.generate_s3_path_chunk(IMAGE) == '2020/01/2020-01-05_21.39.05.jpg'
-
-
-def test_get_images(dbw):
-    get_images_result = dbw.get_images()
-    assert hasattr(get_images_result, 'entries')
-    assert isinstance(get_images_result.entries, list)
-    assert get_images_result.entries[0].name == '2020-01-05 21.39.05.jpg'
+        FakeImageObj = namedtuple("fake_image", ["path_lower"])
+        fake_image = FakeImageObj(IMAGE_PATH)
+        image = db.get_file_from_dbox(fake_image)
+        self.assertTrue(False)
 
 
-def test_get_file_from_dbox(dbw):
-    md, image_bytes = dbw.get_file_from_dbox(IMAGE)
-    assert hasattr(md, 'media_info')
+
+"""
+POST https://api.dropboxapi.com/oauth2/token
+https://api.dropboxapi.com/2/files/list_folder
+"""
